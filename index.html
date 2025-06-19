@@ -17,61 +17,46 @@
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script>
     // Inizializza la mappa centrata su Siena/Grosseto
-    const mappa = L.map('map').setView([43.2, 11.2], 9);
+    const map = L.map('map').setView([43.2, 11.2], 9);
 
-    // Aggiunge il layer base da OpenStreetMap
+    // Layer base
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap contributors'
-    }).addTo(mappa);
+    }).addTo(map);
 
-    // Tabella semplificata degli stati (normalmente viene da Google Sheet)
+    // Mappa colori da Google Sheet
+    const statoLavorazione = {};
 
-    let statoLavorazione = {};
-
-fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vRRpGIxScCE8o_BSg7rLCRIFedInaw1HaDZrfwjJHIfQj2S1Vziajm6ZFNgoPmZZYoyVBtIjYvzADyO/pub?gid=0&single=true&output=csv')
-  .then(response => response.text())
-  .then(csv => {
-    const rows = csv.split('\n').slice(1); // salta intestazione
-    rows.forEach(row => {
-      const [codice, colore] = row.trim().split(',');
-      if (codice && colore) statoLavorazione[codice] = colore;
-    });
-  })
-  .then(() => {
-    fetch('vigneti.geojson')
-      .then(response => response.json())
-      .then(data => {
-        L.geoJSON(data, {
-          style: feature => ({
-            color: statoLavorazione[feature.properties.CODICE] || 'gray',
-            weight: 2,
-            fillOpacity: 0.6
-          })
-        }).addTo(map);
-      });
-  });
-</script>
-
-    };
-
-    // Carica i vigneti da file GeoJSON
-    fetch('vigneti.geojson')
-      .then(res => res.json())
-      .then(data => {
-        L.geoJSON(data, {
-          style: feature => {
-            const codice = feature.properties.codice;
-            return {
-              color: 'black',
-              weight: 1,
-              fillColor: statoLavorazione[codice] || 'gray',
-              fillOpacity: 0.5
-            };
-          },
-          onEachFeature: (feature, layer) => {
-            layer.bindPopup(`Vigneto: ${feature.properties.codice}`);
-          }
-        }).addTo(mappa);
+    fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vRRpGIxScCE8o_BSg7rLCRIFedInaw1HaDZrfwjJHIfQj2S1Vziajm6ZFNgoPmZZYoyVBtIjYvzADyO/pub?gid=0&single=true&output=csv')
+      .then(response => response.text())
+      .then(csv => {
+        const rows = csv.split('\n').slice(1); // salta intestazione
+        rows.forEach(row => {
+          const [codice, colore] = row.trim().split(',');
+          if (codice && colore) statoLavorazione[codice] = colore;
+        });
+      })
+      .then(() => {
+        // Carica i poligoni dei vigneti
+        fetch('vigneti.geojson')
+          .then(response => response.json())
+          .then(data => {
+            L.geoJSON(data, {
+              style: feature => {
+                const codice = feature.properties.codice; // Assicurati sia "codice" nel tuo geojson
+                return {
+                  color: 'black',
+                  weight: 1,
+                  fillColor: statoLavorazione[codice] || 'gray',
+                  fillOpacity: 0.6
+                };
+              },
+              onEachFeature: (feature, layer) => {
+                const codice = feature.properties.codice;
+                layer.bindPopup(`Vigneto: ${codice}`);
+              }
+            }).addTo(map);
+          });
       });
   </script>
 </body>
