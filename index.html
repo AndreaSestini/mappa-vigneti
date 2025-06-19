@@ -19,15 +19,19 @@
     // Inizializza la mappa centrata su Siena/Grosseto
     const map = L.map('map').setView([43.2, 11.2], 9);
 
-    // Layer base
+    // Aggiunge il layer base
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
 
-    // Mappa colori da Google Sheet
+    // Mappa dei colori presi da Google Sheet
     const statoLavorazione = {};
 
-    fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vRRpGIxScCE8o_BSg7rLCRIFedInaw1HaDZrfwjJHIfQj2S1Vziajm6ZFNgoPmZZYoyVBtIjYvzADyO/pub?gid=0&single=true&output=csv')
+    // URL del tuo foglio Google Sheets in formato CSV
+    const sheetURL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRRpGIxScCE8o_BSg7rLCRIFedInaw1HaDZrfwjJHIfQj2S1Vziajm6ZFNgoPmZZYoyVBtIjYvzADyO/pub?gid=0&single=true&output=csv';
+
+    // Carica i dati dei colori dal foglio
+    fetch(sheetURL)
       .then(response => response.text())
       .then(csv => {
         const rows = csv.split('\n').slice(1); // salta intestazione
@@ -43,7 +47,7 @@
           .then(data => {
             L.geoJSON(data, {
               style: feature => {
-                const codice = feature.properties.codice; // Assicurati sia "codice" nel tuo geojson
+                const codice = feature.properties.CODICE;
                 return {
                   color: 'black',
                   weight: 1,
@@ -52,7 +56,7 @@
                 };
               },
               onEachFeature: (feature, layer) => {
-                const codice = feature.properties.codice;
+                const codice = feature.properties.CODICE;
                 layer.bindPopup(`Vigneto: ${codice}`);
               }
             }).addTo(map);
