@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Mappa Vigneti</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <style>
+    #map {
+      height: 100vh;
+      width: 100vw;
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script>
+    const map = L.map('map').setView([43.2, 11.2], 9);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    const vignetiData = {}; // conterrà tutti i dati per ogni codice
+
+    const sheetURL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRRpGIxScCE8o_BSg7rLCRIFedInaw1HaDZrfwjJHIfQj2S1Vziajm6ZFNgoPmZZYoyVBtIjYvzADyO/pub?gid=0&single=true&output=csv';
+
+    fetch(sheetURL)
+      .then(response => response.text())
+      .then(csv => {
+        const rows = csv.split('\n').slice(1);
+        rows.forEach(row => {
+          const [
+            codice, ha, luogo, varieta, anno, sesto,
+            forma, note, lavorazioni, stato
+          ] = row.split(',');
+
+          if (codice) {
+            vignetiData[codice.trim()] = {
+              luogo: luogo?.trim(),
+              varieta: varieta?.trim(),
+              lavorazioni: lavorazioni?.trim(),
+              stato: stato?.trim()
+            };
+          }
+        });
+      })
+      .then(() => {
+        fetch('vigneti.geojson') // oppure 'vigneti_modificato.geojson' se rinominato
+          .then(res => res.json())
+          .then(data => {
+            L.geoJSON(data, {
+              style: feature => {
+                const codice = feature.properties.CODICE;
+                const stato = vignetiData[codice]?.stato || 'gray';
+                return {
+                  color: 'black',
+                  weight: 1,
+                  fillColor: stato,
+                  fillOpacity: 0.6
+                };
+              },
+              onEachFeature: (feature, layer) => {
+                const codice = feature.properties.CODICE;
+                const info = vignetiData[codice];
+                const contenuto = info
+                  ? `<b>${codice}</b><br>
+                     Luogo: ${info.luogo}<br>
+                     Varietà: ${info.varieta}<br>
+                     Lavorazioni: ${info.lavorazioni}<br>
+                     Stato: ${info.stato}`
+                  : `<b>${codice}</b><br><i>Nessun dato</i>`;
+                layer.bindPopup(contenuto);
+              }
+            }).addTo(map);
+          });
+      });
+  </script>
+</body>
+</html>
