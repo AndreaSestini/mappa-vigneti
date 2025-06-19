@@ -25,12 +25,33 @@
     }).addTo(mappa);
 
     // Tabella semplificata degli stati (normalmente viene da Google Sheet)
-    const statoLavorazione = {
-      V001: 'green',
-      V002: 'orange',
-      V003: 'yellow',
-      V004: 'red',
-      // aggiungi altri codici...
+
+    let statoLavorazione = {};
+
+fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vRRpGIxScCE8o_BSg7rLCRIFedInaw1HaDZrfwjJHIfQj2S1Vziajm6ZFNgoPmZZYoyVBtIjYvzADyO/pub?gid=0&single=true&output=csv')
+  .then(response => response.text())
+  .then(csv => {
+    const rows = csv.split('\n').slice(1); // salta intestazione
+    rows.forEach(row => {
+      const [codice, colore] = row.trim().split(',');
+      if (codice && colore) statoLavorazione[codice] = colore;
+    });
+  })
+  .then(() => {
+    fetch('vigneti.geojson')
+      .then(response => response.json())
+      .then(data => {
+        L.geoJSON(data, {
+          style: feature => ({
+            color: statoLavorazione[feature.properties.CODICE] || 'gray',
+            weight: 2,
+            fillOpacity: 0.6
+          })
+        }).addTo(map);
+      });
+  });
+</script>
+
     };
 
     // Carica i vigneti da file GeoJSON
