@@ -16,48 +16,62 @@
 
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script>
-    // Inizializza la mappa centrata su Siena/Grosseto
     const map = L.map('map').setView([43.2, 11.2], 9);
 
-    // Aggiunge il layer base
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
 
-    // Mappa dei colori presi da Google Sheet
-    const statoLavorazione = {};
+    const vignetiData = {}; // conterrà tutti i dati per ogni codice
 
-    // URL del tuo foglio Google Sheets in formato CSV
     const sheetURL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRRpGIxScCE8o_BSg7rLCRIFedInaw1HaDZrfwjJHIfQj2S1Vziajm6ZFNgoPmZZYoyVBtIjYvzADyO/pub?gid=0&single=true&output=csv';
 
-    // Carica i dati dei colori dal foglio
     fetch(sheetURL)
       .then(response => response.text())
       .then(csv => {
-        const rows = csv.split('\n').slice(1); // salta intestazione
+        const rows = csv.split('\n').slice(1);
         rows.forEach(row => {
-          const [codice, colore] = row.trim().split(',');
-          if (codice && colore) statoLavorazione[codice] = colore;
+          const [
+            codice, ha, luogo, varieta, anno, sesto,
+            forma, note, lavorazioni, stato
+          ] = row.split(',');
+
+          if (codice) {
+            vignetiData[codice.trim()] = {
+              luogo: luogo?.trim(),
+              varieta: varieta?.trim(),
+              lavorazioni: lavorazioni?.trim(),
+              stato: stato?.trim()
+            };
+          }
         });
       })
       .then(() => {
-        // Carica i poligoni dei vigneti
-        fetch('vigneti.geojson')
-          .then(response => response.json())
+        fetch('vigneti.geojson') // oppure 'vigneti_modificato.geojson' se rinominato
+          .then(res => res.json())
           .then(data => {
             L.geoJSON(data, {
               style: feature => {
                 const codice = feature.properties.CODICE;
+                const stato = vignetiData[codice]?.stato || 'gray';
                 return {
                   color: 'black',
                   weight: 1,
-                  fillColor: statoLavorazione[codice] || 'gray',
+                  fillColor: stato,
                   fillOpacity: 0.6
                 };
               },
               onEachFeature: (feature, layer) => {
                 const codice = feature.properties.CODICE;
-                layer.bindPopup(`Vigneto: ${codice}`);
+                const info = vignetiData[codice];
+                const contenuto = info
+                  ? `<b>${codice}</b><br>
+                     Luogo: ${info.luogo}<br>
+                     Varietà: ${info.varieta}<br>
+                     Lavorazioni: ${info.lavorazioni}<br>
+                     Stato: ${info.stato}`
+                  : `<b>${codice}</b><br><i>Nessun dato</i>`;
+                layer.bindPopup(contenuto);
               }
             }).addTo(map);
           });
