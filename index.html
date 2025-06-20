@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html>
 <head>
@@ -23,27 +22,19 @@
       attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
 
-    const vignetiData = {};
-
     const sheetURL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRRpGIxScCE8o_BSg7rLCRIFedInaw1HaDZrfwjJHIfQj2S1Vziajm6ZFNgoPmZZYoyVBtIjYvzADyO/pub?gid=0&single=true&output=csv';
+    const vignetiData = {};
 
     fetch(sheetURL)
       .then(response => response.text())
       .then(csv => {
         const rows = csv.split('\n').slice(1);
         rows.forEach(row => {
-          const [
-            codice, ha, luogo, varieta, anno, sesto,
-            forma, note, lavorazioni, stato
-          ] = row.split(',');
-
+          const cols = row.split(',');
+          const codice = cols[0]?.trim();      // colonna 1 = IDCatastal
+          const stato = cols[9]?.trim();       // colonna 10 = stato lavorazione
           if (codice) {
-            vignetiData[codice.trim()] = {
-              luogo: luogo?.trim(),
-              varieta: varieta?.trim(),
-              lavorazioni: lavorazioni?.trim(),
-              stato: stato?.trim()
-            };
+            vignetiData[codice] = { stato: stato || 'gray' };
           }
         });
       })
@@ -63,16 +54,15 @@
                 };
               },
               onEachFeature: (feature, layer) => {
-                const codice = feature.properties.CODICE;
-                const info = vignetiData[codice];
-                const contenuto = info
-                  ? `<b>${codice}</b><br>
-                     Luogo: ${info.luogo}<br>
-                     Varietà: ${info.varieta}<br>
-                     Lavorazioni: ${info.lavorazioni}<br>
-                     Stato: ${info.stato}`
-                  : `<b>${codice}</b><br><i>Nessun dato</i>`;
-                layer.bindPopup(contenuto);
+                const p = feature.properties;
+                const popup = `
+                  <b>Codice:</b> ${p.CODICE}<br>
+                  <b>UTE:</b> ${p.UTE || '-'}<br>
+                  <b>Anno impianto:</b> ${p.AnnoImpian || '-'}<br>
+                  <b>Varietà:</b> ${p.BA_Descriz || '-'}<br>
+                  <b>Stato lavorazione:</b> ${vignetiData[p.CODICE]?.stato || '-'}
+                `;
+                layer.bindPopup(popup);
               }
             }).addTo(map);
           });
